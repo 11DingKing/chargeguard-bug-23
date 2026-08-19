@@ -2,13 +2,16 @@ package httpapi
 
 import (
 	"chargeguard/internal/charging"
+	"encoding/json"
 	"net/http"
 )
 
 func TaskHTTPHandler(w http.ResponseWriter, r *http.Request) {
 	err := charging.SendReminder()
 	if charging.IsRetryableReminder(err) {
-		http.Error(w, "retry", http.StatusServiceUnavailable)
+		w.Header().Set("Retry-After", "30")
+		w.WriteHeader(http.StatusServiceUnavailable)
+		_ = json.NewEncoder(w).Encode(map[string]string{"queue": "retry"})
 		return
 	}
 	if err != nil {
